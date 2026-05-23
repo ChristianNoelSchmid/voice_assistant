@@ -23,13 +23,13 @@ static AT_MIDNIGHT: LazyLock<Regex> = LazyLock::new(|| {
 });
 
 impl Token for TimeToken {
-    fn parse(text: &str) -> Option<Self> {
-        if AT_NOON.is_match(text) {
-            return Some(TimeToken { hour: 12, minute: 0 });
+    fn parse(text: &str) -> Option<(Self, std::ops::Range<usize>)> {
+        if let Some(m) = AT_NOON.find(text) {
+            return Some((TimeToken { hour: 12, minute: 0 }, m.range()));
         }
 
-        if AT_MIDNIGHT.is_match(text) {
-            return Some(TimeToken { hour: 0, minute: 0 });
+        if let Some(m) = AT_MIDNIGHT.find(text) {
+            return Some((TimeToken { hour: 0, minute: 0 }, m.range()));
         }
 
         if let Some(caps) = AT_TIME.captures(text) {
@@ -44,7 +44,7 @@ impl Token for TimeToken {
                 _ => {}
             }
 
-            return Some(TimeToken { hour, minute });
+            return Some((TimeToken { hour, minute }, caps.get(0).unwrap().range()));
         }
 
         None

@@ -72,31 +72,31 @@ fn weekday_from_str(s: &str) -> Option<Weekday> {
 }
 
 impl Token for PeriodToken {
-    fn parse(text: &str) -> Option<Self> {
+    fn parse(text: &str) -> Option<(Self, std::ops::Range<usize>)> {
         // "every day" is checked before "every [weekday]" to avoid a false
         // match on a hypothetical weekday named "day".
-        if EVERY_DAY.is_match(text) {
-            return Some(PeriodToken {
+        if let Some(m) = EVERY_DAY.find(text) {
+            return Some((PeriodToken {
                 spec: PeriodSpec::Daily,
                 recurrence: Recurrence::Daily,
-            });
+            }, m.range()));
         }
 
         // Month-day patterns are checked next: they contain "of the month"
         // so they won't collide with weekday patterns.
         if let Some(caps) = MONTH_DAY.captures(text) {
             let day: u8 = caps[1].parse().ok()?;
-            return Some(PeriodToken {
+            return Some((PeriodToken {
                 spec: PeriodSpec::MonthDay(day.clamp(1, 31)),
                 recurrence: Recurrence::Monthly,
-            });
+            }, caps.get(0).unwrap().range()));
         }
 
         if let Some(caps) = EVERY_WEEKDAY.captures(text) {
-            return Some(PeriodToken {
+            return Some((PeriodToken {
                 spec: PeriodSpec::Weekday(weekday_from_str(&caps[1])?),
                 recurrence: Recurrence::Weekly,
-            });
+            }, caps.get(0).unwrap().range()));
         }
 
         if let Some(caps) = ON_WEEKDAY.captures(text) {
@@ -105,10 +105,10 @@ impl Token for PeriodToken {
             } else {
                 Recurrence::Once    // "on Sunday"
             };
-            return Some(PeriodToken {
+            return Some((PeriodToken {
                 spec: PeriodSpec::Weekday(weekday_from_str(&caps[1])?),
                 recurrence,
-            });
+            }, caps.get(0).unwrap().range()));
         }
 
         None

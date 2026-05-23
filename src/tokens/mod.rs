@@ -10,5 +10,5 @@ pub use remind::RemindToken;
 pub use time::TimeToken;
 
 pub trait Token: Sized {
-    fn parse(text: &str) -> Option<Self>;
+    fn parse(text: &str) -> Option<(Self, std::ops::Range<usize>)>;
 }
