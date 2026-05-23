@@ -2,7 +2,7 @@ use crate::commands::DynCommandHandler;
 use crate::recognizer::RecognitionEvent;
 use std::time::{Duration, Instant};
 
-const WAKE_PHRASE: &str = "computer";
+pub const WAKE_PHRASE: &str = "popcorn";
 const COMMAND_TIMEOUT: Duration = Duration::from_secs(5);
 
 #[derive(Clone, Copy)]

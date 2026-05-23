@@ -722,6 +722,7 @@ name = "voice_assistant"
 version = "0.1.0"
 dependencies = [
  "cpal",
+ "regex",
  "vosk",
 ]
 

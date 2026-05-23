@@ -5,4 +5,5 @@ edition = "2024"
 
 [dependencies]
 cpal = "0.15"
+regex = "1"
 vosk = "0.2"
