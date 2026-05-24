@@ -25,11 +25,17 @@ pub struct RemindMatch {
 pub struct RemindCommand {
     client: DynTaskClient,
     speaker: DynSpeaker,
+    project_id: u64,
 }
 
 impl RemindCommand {
-    pub fn new(client: DynTaskClient, speaker: DynSpeaker) -> Self {
-        Self { client, speaker }
+    /// Create a new [`RemindCommand`] that writes tasks into `project_id`.
+    pub fn new(client: DynTaskClient, speaker: DynSpeaker, project_id: u64) -> Self {
+        Self {
+            client,
+            speaker,
+            project_id,
+        }
     }
 }
 
@@ -68,7 +74,7 @@ impl CommandHandler for RemindCommand {
         })
     }
 
-    async fn handle(&mut self, matched: Self::Match) {
+    async fn handle(&self, matched: Self::Match) {
         let title = &matched.remind.content;
         println!("[Remind] \"{}\"", title);
         if let Some(p) = matched.period {
@@ -83,7 +89,7 @@ impl CommandHandler for RemindCommand {
 
         match self
             .client
-            .create_task(title, due_date, repeat_after, repeat_mode)
+            .create_task(title, due_date, repeat_after, repeat_mode, self.project_id)
             .await
         {
             Ok(()) => {

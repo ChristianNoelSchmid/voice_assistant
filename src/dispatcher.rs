@@ -1,12 +1,15 @@
 use crate::commands::DynCommandHandler;
-use crate::recognizer::RecognitionEvent;
-use std::time::{Duration, Instant};
+use crate::recognizer::{RecognitionEvent, RecognizerMode};
+use std::{
+    sync::Arc,
+    time::{Duration, Instant},
+};
 
-pub const WAKE_PHRASE: &str = "popcorn";
+pub const WAKE_PHRASE: &str = "harlequin";
 const COMMAND_TIMEOUT: Duration = Duration::from_secs(5);
 
 #[derive(Clone, Copy)]
-enum State {
+enum Behavior {
     /// Waiting for the wake phrase.
     Idle,
     /// Wake phrase heard; accepting commands until `deadline`.
@@ -15,60 +18,72 @@ enum State {
 
 /// Routes [`RecognitionEvent`]s to command handlers after the wake phrase is detected.
 pub struct Dispatcher {
-    handlers: Vec<Box<dyn DynCommandHandler>>,
-    state: State,
+    handlers: Vec<Arc<dyn DynCommandHandler>>,
+    behavior: Behavior,
 }
 
 impl Dispatcher {
-    pub fn new(handlers: Vec<Box<dyn DynCommandHandler>>) -> Self {
+    pub fn new(handlers: Vec<Arc<dyn DynCommandHandler>>) -> Self {
         Self {
             handlers,
-            state: State::Idle,
+            behavior: Behavior::Idle,
         }
     }
 
-    pub async fn dispatch(&mut self, event: RecognitionEvent) {
+    fn check_timeout(&mut self) {
+        if let Behavior::Active { deadline } = self.behavior {
+            if Instant::now() >= deadline {
+                eprintln!("[Timed out — back to idle]");
+                self.behavior = Behavior::Idle;
+            }
+        }
+    }
+
+    /// Processes a recognition event and returns the [`RecognizerMode`] the caller
+    /// should switch to.  The caller is responsible for forwarding this to
+    /// [`SpeechRecognizer::set_mode`] so the correct Vosk recognizer is used for
+    /// subsequent audio chunks.
+    pub async fn dispatch(&mut self, event: RecognitionEvent) -> RecognizerMode {
         match event {
             RecognitionEvent::Partial(text) => self.process(&text, false).await,
             RecognitionEvent::Finalized(text) => self.process(&text, true).await,
         }
         self.check_timeout();
+        match self.behavior {
+            Behavior::Idle => RecognizerMode::Idle,
+            Behavior::Active { .. } => RecognizerMode::Active,
+        }
     }
 
     async fn process(&mut self, text: &str, is_final: bool) {
         let lower = text.to_lowercase();
-        match self.state {
+
+        match self.behavior {
             // Wake phrase is checked on partial results so activation happens before Vosk finalizes.
-            State::Idle => {
+            Behavior::Idle => {
                 if lower.contains(WAKE_PHRASE) {
                     eprintln!(
                         "[Activated] Listening for a command ({} s timeout)...",
                         COMMAND_TIMEOUT.as_secs()
                     );
-                    self.state = State::Active {
+                    self.behavior = Behavior::Active {
                         deadline: Instant::now() + COMMAND_TIMEOUT,
                     };
                 }
             }
-            State::Active { ref mut deadline } => {
+            Behavior::Active { .. } => {
                 if is_final {
-                    for handler in &mut self.handlers {
+                    let handlers = self.handlers.clone();
+                    // Return to Idle before running handlers so that audio buffered
+                    // while the speaker plays back cannot re-trigger commands.
+                    self.behavior = Behavior::Idle;
+
+                    for handler in handlers {
                         if handler.try_handle(text).await {
                             break;
                         }
                     }
-                    // Reset deadline after each command so the user can chain commands without re-waking.
-                    *deadline = Instant::now() + COMMAND_TIMEOUT;
                 }
-            }
-        }
-    }
-
-    fn check_timeout(&mut self) {
-        if let State::Active { deadline } = self.state {
-            if Instant::now() >= deadline {
-                eprintln!("[Timed out — back to idle]");
-                self.state = State::Idle;
             }
         }
     }

@@ -19,7 +19,7 @@ pub enum TaskClientError {
 /// Abstraction over a task-management backend (e.g. Vikunja).
 #[async_trait]
 pub trait TaskClient {
-    /// Create a new task with an optional due date and recurrence settings.
+    /// Create a new task in `project_id` with an optional due date and recurrence settings.
     ///
     /// `repeat_after` and `repeat_mode` are backend-specific; see the Vikunja
     /// implementation for their semantics.
@@ -29,6 +29,7 @@ pub trait TaskClient {
         due_date: Option<DateTime<Utc>>,
         repeat_after: Option<i64>,
         repeat_mode: Option<i32>,
+        project_id: u64,
     ) -> Result<(), TaskClientError>;
 }
 

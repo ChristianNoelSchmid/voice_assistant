@@ -18,16 +18,27 @@ An offline voice assistant written in Rust. Listens continuously for a wake phra
 
 ## Setup
 
-**1. Download a Vosk model**
+**1. Download native binary dependencies**
+
+The Vosk shared library, Piper TTS runtime, and Piper voice model are not tracked in git. Run the provided script to fetch them:
+
+```bash
+./scripts/download_deps.sh
+```
+
+This populates `lib/` with native shared libraries, the Piper runtime, and the voice model.
+
+**2. Download a Vosk speech model**
 
 ```bash
 wget https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.22.zip
-unzip vosk-model-small-en-us-0.22.zip -d model
+unzip vosk-model-small-en-us-0.22.zip
+mv vosk-model-small-en-us-0.22 lib/vosk_model
 ```
 
-The extracted directory should be named `model/` in the project root, or pass its path as the first argument at runtime.
+The model must live at `lib/vosk_model/`, or pass a custom path as the first argument at runtime.
 
-**2. Configure environment variables**
+**3. Configure environment variables**
 
 Create a `.env` file in the project root:
 
@@ -37,7 +48,7 @@ VIKUNJA_TOKEN=your_api_token_here
 VIKUNJA_PROJECT_ID=1
 ```
 
-**3. Build and run**
+**4. Build and run**
 
 ```bash
 cargo run --release
