@@ -21,15 +21,15 @@ impl Dispatcher {
         Self { handlers, state: State::Idle }
     }
 
-    pub fn dispatch(&mut self, event: RecognitionEvent) {
+    pub async fn dispatch(&mut self, event: RecognitionEvent) {
         match event {
-            RecognitionEvent::Partial(text) => self.process(&text, false),
-            RecognitionEvent::Finalized(text) => self.process(&text, true),
+            RecognitionEvent::Partial(text) => self.process(&text, false).await,
+            RecognitionEvent::Finalized(text) => self.process(&text, true).await,
         }
         self.check_timeout();
     }
 
-    fn process(&mut self, text: &str, is_final: bool) {
+    async fn process(&mut self, text: &str, is_final: bool) {
         let lower = text.to_lowercase();
         match self.state {
             State::Idle => {
@@ -41,7 +41,7 @@ impl Dispatcher {
             State::Active { ref mut deadline } => {
                 if is_final {
                     for handler in &mut self.handlers {
-                        if handler.try_handle(text) {
+                        if handler.try_handle(text).await {
                             break;
                         }
                     }

@@ -1,8 +1,11 @@
+use async_trait::async_trait;
+
 use super::CommandHandler;
 
 /// Placeholder that prints any command until real handlers are wired up.
 pub struct PrintHandler;
 
+#[async_trait]
 impl CommandHandler for PrintHandler {
     type Match = String;
 
@@ -10,7 +13,7 @@ impl CommandHandler for PrintHandler {
         Some(text.to_owned())
     }
 
-    fn handle(&mut self, matched: Self::Match) {
+    async fn handle(&mut self, matched: Self::Match) {
         println!("Command: {matched}");
     }
 }
