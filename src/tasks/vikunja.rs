@@ -28,17 +28,17 @@ struct CreateTaskBody {
 }
 
 impl VikunjaClient {
-    /// Construct a [`VikunjaClient`] from `VIKUNJA_URL` and `VIKUNJA_TOKEN` environment variables.
-    pub fn from_env() -> Result<DynTaskClient, TaskClientError> {
-        let base_url = std::env::var("VIKUNJA_URL")
-            .map_err(|_| TaskClientError::CreateError("`VIKUNJA_URL` is not set".into()))?;
-        let token = std::env::var("VIKUNJA_TOKEN")
-            .map_err(|_| TaskClientError::CreateError("`VIKUNJA_TOKEN` is not set".into()))?;
-        Ok(Arc::new(Self {
-            base_url: base_url.trim_end_matches('/').to_string(),
+    /// Construct a [`VikunjaClient`] from a base URL and an API token.
+    ///
+    /// `base_url` is expected to be already normalised (trailing slash stripped);
+    /// [`Config::load`] does this before calling constructors. The token comes
+    /// from the `VIKUNJA_TOKEN` environment variable, read in `main`.
+    pub fn new(base_url: String, token: String) -> DynTaskClient {
+        Arc::new(Self {
+            base_url,
             token,
             client: reqwest::Client::new(),
-        }))
+        })
     }
 }
 

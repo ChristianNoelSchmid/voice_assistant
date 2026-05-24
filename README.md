@@ -31,9 +31,10 @@ This populates `lib/` with native shared libraries, the Piper runtime, and the v
 **2. Download a Vosk speech model**
 
 ```bash
-wget https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.22.zip
-unzip vosk-model-small-en-us-0.22.zip
-mv vosk-model-small-en-us-0.22 lib/vosk_model
+wget https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip
+unzip vosk-model-small-en-us-0.15.zip
+mv vosk-model-small-en-us-0.15 lib/vosk_model
+rm vosk-model-small-en-us-0.15.zip
 ```
 
 The model must live at `lib/vosk_model/`, or pass a custom path as the first argument at runtime.

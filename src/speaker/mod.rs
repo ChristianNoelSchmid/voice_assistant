@@ -19,9 +19,6 @@ pub enum SpeakerError {
     #[error("audio playback error: {0}")]
     Audio(String),
 
-    /// A required configuration value (e.g. an environment variable) was missing or invalid.
-    #[error("configuration error: {0}")]
-    Config(String),
 }
 
 /// Abstraction over a text-to-speech backend.

@@ -23,24 +23,16 @@ pub struct PiperSpeaker {
 }
 
 impl PiperSpeaker {
-    /// Construct a [`PiperSpeaker`] from environment variables.
+    /// Construct a [`PiperSpeaker`] from config values.
     ///
-    /// - `PIPER_BIN` (optional): path to the `piper` executable; defaults to `"piper"` (i.e. on `PATH`).
-    /// - `PIPER_MODEL` (required): path to the Piper `.onnx` model file.
-    /// - `PIPER_SAMPLE_RATE` (optional): sample rate of that model in Hz; defaults to `22050`.
-    pub fn from_env() -> Result<DynSpeaker, SpeakerError> {
-        let bin_path = std::env::var("PIPER_BIN").unwrap_or_else(|_| "piper".into());
-        let model_path = std::env::var("PIPER_MODEL")
-            .map_err(|_| SpeakerError::Config("`PIPER_MODEL` is not set".into()))?;
-        let sample_rate = std::env::var("PIPER_SAMPLE_RATE")
-            .ok()
-            .and_then(|s| s.parse().ok())
-            .unwrap_or(22050u32);
-        Ok(Arc::new(Self {
+    /// Paths are validated by [`Config::validate`] before this is called, so
+    /// this constructor is infallible.
+    pub fn new(bin_path: String, model_path: String, sample_rate: u32) -> DynSpeaker {
+        Arc::new(Self {
             bin_path,
             model_path,
             sample_rate,
-        }))
+        })
     }
 }
 

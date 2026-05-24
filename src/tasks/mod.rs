@@ -8,8 +8,6 @@ use chrono::{DateTime, Utc};
 /// Errors that can occur when creating or communicating with a task backend.
 #[derive(Debug, thiserror::Error)]
 pub enum TaskClientError {
-    #[error("client creation failed: {0}")]
-    CreateError(String),
     #[error(transparent)]
     Request(#[from] reqwest::Error),
     #[error("API returned {0}")]

@@ -5,22 +5,35 @@ Rust voice assistant that listens for a wake phrase ("popcorn"), then routes spo
 ## Build & Run
 
 ```bash
-cargo run -- model/   # model/ is the Vosk model directory (default if omitted)
+cargo run             # loads config.json + VIKUNJA_TOKEN from env/.env
 cargo check           # fast type-check without linking
 cargo build           # full build
 ```
 
-Requires a `.env` file (or environment variables):
+Runtime config lives in two places:
+
+**`config.json`** — all non-secret values (see `src/config.rs` for the schema):
+
+| Field | Description |
+|---|---|
+| `vosk_model` | Path to the Vosk model directory |
+| `vikunja_url` | Base URL of the Vikunja instance |
+| `vikunja_project_id` | Project ID for reminder tasks |
+| `vikunja_shopping_project_id` | Project ID for shopping list tasks |
+| `piper_bin` | Path to the Piper binary (bare name = resolve via PATH) |
+| `piper_model` | Path to the Piper `.onnx` voice model |
+| `piper_sample_rate` | Sample rate in Hz (optional, defaults to 22050) |
+
+**`.env` / environment variable** — secret only:
 
 | Variable | Description |
 |---|---|
-| `VIKUNJA_URL` | Base URL of your Vikunja instance |
 | `VIKUNJA_TOKEN` | Vikunja API token |
-| `VIKUNJA_PROJECT_ID` | Numeric ID of the project to create tasks in |
 
 ## Architecture
 
 ```
+config.rs         Loads and validates config.json; all validation lives in Config::validate
 audio.rs          Captures 16 kHz mono i16 PCM from the default input device (cpal)
 recognizer.rs     Wraps Vosk; emits Partial / Finalized RecognitionEvents
 dispatcher.rs     State machine: Idle → Active on wake phrase; routes text to handlers

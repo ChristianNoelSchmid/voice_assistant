@@ -1,0 +1,8 @@
+{
+  "vosk_model": "lib/vosk_model",
+  "vikunja_url": "[public-facing URL]",
+  "vikunja_project_id": 2,
+  "vikunja_shopping_project_id": 3,
+  "piper_bin": "lib/piper/piper",
+  "piper_model": "lib/piper_model/en_US-lessac-medium.onnx"
+}
