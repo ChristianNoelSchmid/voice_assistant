@@ -4,6 +4,8 @@ use std::sync::mpsc::{self, Receiver, SyncSender};
 
 pub const SAMPLE_RATE: u32 = 16000;
 
+/// Captures mono 16 kHz audio from the default input device and streams
+/// i16 sample chunks over a sync channel.
 pub struct AudioCapture {
     // Kept alive to hold the stream open; dropped when AudioCapture is dropped.
     _stream: Stream,
@@ -25,12 +27,14 @@ impl AudioCapture {
             buffer_size: cpal::BufferSize::Default,
         };
 
+        // Bound of 64 caps memory if the recognizer falls behind; try_send drops rather than blocks.
         let (tx, rx): (SyncSender<Vec<i16>>, _) = mpsc::sync_channel(64);
 
         let stream = device
             .build_input_stream(
                 &config,
                 move |data: &[f32], _| {
+                    // cpal delivers f32 samples; Vosk expects i16, so convert with full-range scaling.
                     let samples: Vec<i16> = data
                         .iter()
                         .map(|&s| (s.clamp(-1.0, 1.0) * i16::MAX as f32) as i16)
@@ -44,6 +48,9 @@ impl AudioCapture {
 
         stream.play().expect("Failed to start audio stream");
 
-        Self { _stream: stream, rx }
+        Self {
+            _stream: stream,
+            rx,
+        }
     }
 }

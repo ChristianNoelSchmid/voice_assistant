@@ -8,6 +8,8 @@ use async_trait::async_trait;
 
 use crate::tokens;
 
+/// Typed command handler. `parse` extracts a strongly-typed match from normalized text;
+/// `handle` acts on it. Automatically gets a [`DynCommandHandler`] blanket impl.
 #[async_trait]
 pub trait CommandHandler {
     type Match: Send;
@@ -16,8 +18,13 @@ pub trait CommandHandler {
     async fn handle(&mut self, matched: Self::Match);
 }
 
+// CommandHandler has an associated type and cannot be used as a trait object directly.
+// DynCommandHandler is the object-safe wrapper stored in the dispatcher's handler list.
+/// Object-safe wrapper around [`CommandHandler`] for use in heterogeneous handler lists.
 #[async_trait]
 pub trait DynCommandHandler {
+    /// Normalize `text`, attempt to parse it, and handle the result.
+    /// Returns `true` if the command was claimed and handled.
     async fn try_handle(&mut self, text: &str) -> bool;
 }
 

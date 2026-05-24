@@ -6,17 +6,19 @@ use regex::Regex;
 
 use async_trait::async_trait;
 
-use crate::tokens::{PeriodSpec, PeriodToken, Recurrence, RemindToken, TimeToken, Token, Weekday};
 use crate::tasks::DynTaskClient;
+use crate::tokens::{PeriodSpec, PeriodToken, Recurrence, RemindToken, TimeToken, Token, Weekday};
 
 use super::CommandHandler;
 
+/// Parsed data extracted from a "remind me…" utterance.
 pub struct RemindMatch {
     pub remind: RemindToken,
     pub period: Option<PeriodToken>,
     pub time: Option<TimeToken>,
 }
 
+/// Handles "remind me to X [period] [time]" utterances by creating a task in Vikunja.
 pub struct RemindCommand {
     client: DynTaskClient,
 }
@@ -34,6 +36,8 @@ impl CommandHandler for RemindCommand {
     fn parse(&self, text: &str) -> Option<Self::Match> {
         let (_, remind_span) = RemindToken::parse(text)?;
 
+        // Track which byte ranges were consumed by sub-tokens so they can be
+        // stripped when extracting the reminder content phrase.
         let mut consumed: Vec<Range<usize>> = vec![];
 
         let period = PeriodToken::parse(text).map(|(token, span)| {
@@ -46,6 +50,7 @@ impl CommandHandler for RemindCommand {
             token
         });
 
+        // Require at least a period or time — bare "remind me to X" with no schedule is rejected.
         if period.is_none() && time.is_none() {
             return None;
         }
@@ -72,14 +77,21 @@ impl CommandHandler for RemindCommand {
         let due_date = compute_due_date(matched.period.as_ref(), matched.time.as_ref());
         let (repeat_after, repeat_mode) = compute_repeat(matched.period.as_ref());
 
-        match self.client.create_task(title, due_date, repeat_after, repeat_mode).await {
+        match self
+            .client
+            .create_task(title, due_date, repeat_after, repeat_mode)
+            .await
+        {
             Ok(()) => println!("[Remind] Task created in Vikunja."),
             Err(e) => eprintln!("[Remind] Failed to create task: {e}"),
         }
     }
 }
 
-fn compute_due_date(period: Option<&PeriodToken>, time: Option<&TimeToken>) -> Option<DateTime<Utc>> {
+fn compute_due_date(
+    period: Option<&PeriodToken>,
+    time: Option<&TimeToken>,
+) -> Option<DateTime<Utc>> {
     let today = Local::now().date_naive();
 
     let naive_time = time
@@ -106,9 +118,9 @@ fn compute_repeat(period: Option<&PeriodToken>) -> (Option<i64>, Option<i32>) {
         None => (None, None),
         Some(p) => match p.recurrence {
             Recurrence::Once => (None, None),
-            Recurrence::Daily => (Some(86400), None),
-            Recurrence::Weekly => (Some(604800), None),
-            // repeat_mode=1: Vikunja repeats on the same day-of-month; repeat_after=1 means every 1 month
+            Recurrence::Daily => (Some(86400), None), // seconds in a day
+            Recurrence::Weekly => (Some(604800), None), // seconds in a week
+            // repeat_mode=1 tells Vikunja to interpret repeat_after as months (not seconds).
             Recurrence::Monthly => (Some(1), Some(1)),
         },
     }
@@ -136,12 +148,21 @@ fn next_month_day(from: NaiveDate, day: u8) -> NaiveDate {
             return d;
         }
     }
-    let (ny, nm) = if month == 12 { (year + 1, 1) } else { (year, month + 1) };
-    let last_day = NaiveDate::from_ymd_opt(if nm == 12 { ny + 1 } else { ny }, if nm == 12 { 1 } else { nm + 1 }, 1)
-        .unwrap()
-        .pred_opt()
-        .unwrap()
-        .day();
+    let (ny, nm) = if month == 12 {
+        (year + 1, 1)
+    } else {
+        (year, month + 1)
+    };
+    // Compute the last valid day of the target month so we can clamp days like 31 in February.
+    let last_day = NaiveDate::from_ymd_opt(
+        if nm == 12 { ny + 1 } else { ny },
+        if nm == 12 { 1 } else { nm + 1 },
+        1,
+    )
+    .unwrap()
+    .pred_opt()
+    .unwrap()
+    .day();
     NaiveDate::from_ymd_opt(ny, nm, (day as u32).min(last_day)).unwrap()
 }
 
@@ -166,11 +187,11 @@ fn extract_content(text: &str, from: usize, consumed: &[Range<usize>]) -> String
     }
 
     // The content is the verb phrase that follows "to"
-    static TO_CONTENT: LazyLock<Regex> = LazyLock::new(|| {
-        Regex::new(r"(?i)\bto\s+(\S.*)").unwrap()
-    });
+    static TO_CONTENT: LazyLock<Regex> =
+        LazyLock::new(|| Regex::new(r"(?i)\bto\s+(\S.*)").unwrap());
 
-    TO_CONTENT.captures(&unclaimed)
+    TO_CONTENT
+        .captures(&unclaimed)
         .map(|caps| caps[1].split_whitespace().collect::<Vec<_>>().join(" "))
         .unwrap_or_default()
 }

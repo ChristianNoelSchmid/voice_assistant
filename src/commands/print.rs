@@ -2,7 +2,9 @@ use async_trait::async_trait;
 
 use super::CommandHandler;
 
-/// Placeholder that prints any command until real handlers are wired up.
+/// Fallback handler that prints any unrecognized command to stdout.
+///
+/// Always matches, so it should be last in the handler list.
 pub struct PrintHandler;
 
 #[async_trait]

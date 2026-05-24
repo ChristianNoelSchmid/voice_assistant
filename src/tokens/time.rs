@@ -3,6 +3,7 @@ use std::sync::LazyLock;
 
 use super::Token;
 
+/// A clock time parsed from phrases like "at 9:30 PM", "at noon", or "at midnight".
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct TimeToken {
     pub hour: u8,   // 0–23
@@ -10,22 +11,24 @@ pub struct TimeToken {
 }
 
 // "at 7 AM", "at 9:30 PM"
-static AT_TIME: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"(?i)\bat\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b").unwrap()
-});
+static AT_TIME: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?i)\bat\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b").unwrap());
 
-static AT_NOON: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"(?i)\bat\s+noon\b").unwrap()
-});
+static AT_NOON: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?i)\bat\s+noon\b").unwrap());
 
-static AT_MIDNIGHT: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"(?i)\bat\s+midnight\b").unwrap()
-});
+static AT_MIDNIGHT: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?i)\bat\s+midnight\b").unwrap());
 
 impl Token for TimeToken {
     fn parse(text: &str) -> Option<(Self, std::ops::Range<usize>)> {
         if let Some(m) = AT_NOON.find(text) {
-            return Some((TimeToken { hour: 12, minute: 0 }, m.range()));
+            return Some((
+                TimeToken {
+                    hour: 12,
+                    minute: 0,
+                },
+                m.range(),
+            ));
         }
 
         if let Some(m) = AT_MIDNIGHT.find(text) {
@@ -34,7 +37,8 @@ impl Token for TimeToken {
 
         if let Some(caps) = AT_TIME.captures(text) {
             let mut hour: u8 = caps[1].parse().ok()?;
-            let minute: u8 = caps.get(2)
+            let minute: u8 = caps
+                .get(2)
                 .and_then(|m| m.as_str().parse().ok())
                 .unwrap_or(0);
 

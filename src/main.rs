@@ -2,8 +2,8 @@ mod audio;
 mod commands;
 mod dispatcher;
 mod recognizer;
-mod tokens;
 mod tasks;
+mod tokens;
 
 use audio::AudioCapture;
 use commands::{DynCommandHandler, PrintHandler, RemindCommand};
@@ -13,8 +13,10 @@ use tasks::vikunja::VikunjaClient;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    dotenvy::dotenv().ok();
-    let model_path = std::env::args().nth(1).unwrap_or_else(|| "model".to_string());
+    dotenvy::dotenv()?;
+    let model_path = std::env::args()
+        .nth(1)
+        .unwrap_or_else(|| "model".to_string());
 
     let vikunja_client = VikunjaClient::from_env()?;
 
@@ -30,6 +32,7 @@ async fn main() -> anyhow::Result<()> {
     eprintln!("Ready. Say '{}' to activate.\n", dispatcher::WAKE_PHRASE);
 
     loop {
+        // block_in_place keeps the blocking recv + Vosk decoding off the async executor thread.
         let result = tokio::task::block_in_place(|| {
             let chunk = audio.rx.recv()?;
             Ok::<_, std::sync::mpsc::RecvError>(recognizer.process(&chunk))
@@ -37,7 +40,7 @@ async fn main() -> anyhow::Result<()> {
         match result {
             Ok(Some(event)) => dispatcher.dispatch(event).await,
             Ok(None) => {}
-            Err(_) => break,
+            Err(_) => break, // audio channel closed — microphone disconnected or stream error
         }
     }
     Ok(())

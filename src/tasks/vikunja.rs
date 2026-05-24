@@ -6,6 +6,9 @@ use serde::Serialize;
 
 use super::{DynTaskClient, TaskClient, TaskClientError};
 
+/// [`TaskClient`] backed by a Vikunja instance.
+///
+/// Reads connection details from environment variables via [`VikunjaClient::from_env`].
 pub struct VikunjaClient {
     base_url: String,
     token: String,
@@ -25,6 +28,8 @@ struct CreateTaskBody {
 }
 
 impl VikunjaClient {
+    /// Construct a [`VikunjaClient`] from `VIKUNJA_URL`, `VIKUNJA_TOKEN`, and
+    /// `VIKUNJA_PROJECT_ID` environment variables.
     pub fn from_env() -> Result<DynTaskClient, TaskClientError> {
         let base_url = std::env::var("VIKUNJA_URL")
             .map_err(|_| TaskClientError::CreateError("`VIKUNJA_URL` is not set".into()))?;
@@ -33,7 +38,11 @@ impl VikunjaClient {
         let project_id = std::env::var("VIKUNJA_PROJECT_ID")
             .map_err(|_| TaskClientError::CreateError("`VIKUNJA_PROJECT_ID` is not set".into()))?
             .parse::<u64>()
-            .map_err(|e| TaskClientError::CreateError(format!("`VIKUNJA_PROJECT_ID` is not a valid integer: {e}")))?;
+            .map_err(|e| {
+                TaskClientError::CreateError(format!(
+                    "`VIKUNJA_PROJECT_ID` is not a valid integer: {e}"
+                ))
+            })?;
         Ok(Arc::new(Self {
             base_url: base_url.trim_end_matches('/').to_string(),
             token,
@@ -59,7 +68,11 @@ impl TaskClient for VikunjaClient {
             repeat_mode,
         };
 
-        let url = format!("{}/api/v1/projects/{}/tasks", self.base_url, self.project_id);
+        let url = format!(
+            "{}/api/v1/projects/{}/tasks",
+            self.base_url, self.project_id
+        );
+        // Vikunja's task-creation endpoint is PUT, not POST.
         let resp = self
             .client
             .put(&url)
