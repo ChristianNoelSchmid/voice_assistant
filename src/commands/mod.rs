@@ -1,6 +1,8 @@
+mod clock;
 mod print;
 mod remind;
 
+pub use clock::ClockCommand;
 pub use print::PrintHandler;
 pub use remind::RemindCommand;
 

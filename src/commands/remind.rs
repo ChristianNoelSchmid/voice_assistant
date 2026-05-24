@@ -5,7 +5,10 @@ use chrono::{DateTime, Datelike, Local, NaiveDate, NaiveTime, TimeZone, Utc};
 use regex::Regex;
 
 use async_trait::async_trait;
+use tokio::task::spawn_blocking;
 
+use crate::commands::DynCommandHandler;
+use crate::speaker::DynSpeaker;
 use crate::tasks::DynTaskClient;
 use crate::tokens::{PeriodSpec, PeriodToken, Recurrence, RemindToken, TimeToken, Token, Weekday};
 
@@ -21,11 +24,12 @@ pub struct RemindMatch {
 /// Handles "remind me to X [period] [time]" utterances by creating a task in Vikunja.
 pub struct RemindCommand {
     client: DynTaskClient,
+    speaker: DynSpeaker,
 }
 
 impl RemindCommand {
-    pub fn new(client: DynTaskClient) -> Self {
-        Self { client }
+    pub fn new(client: DynTaskClient, speaker: DynSpeaker) -> Self {
+        Self { client, speaker }
     }
 }
 
@@ -82,7 +86,11 @@ impl CommandHandler for RemindCommand {
             .create_task(title, due_date, repeat_after, repeat_mode)
             .await
         {
-            Ok(()) => println!("[Remind] Task created in Vikunja."),
+            Ok(()) => {
+                println!("[Remind] Task created in Vikunja.");
+                let text = format!("Created reminder: \"{}\"", title);
+                self.speaker.speak(text).await.unwrap();
+            }
             Err(e) => eprintln!("[Remind] Failed to create task: {e}"),
         }
     }
