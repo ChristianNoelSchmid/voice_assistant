@@ -46,3 +46,4 @@ tasks/
 - **Wake phrase on partials**: the dispatcher checks for the wake phrase on `Partial` events so activation happens as soon as the word is spoken, before Vosk finalizes the utterance.
 - **Vikunja task creation uses PUT**, not POST.
 - **Monthly recurrence encoding**: `repeat_mode=1` tells Vikunja to treat `repeat_after` as a month count rather than seconds.
+- **Comment code, and add docstrings to all new methods, traits, structs, etc.**
